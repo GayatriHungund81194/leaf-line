@@ -17,7 +17,9 @@ def create_plant(plant: schemas.PlantCreate, db: Session = Depends(database.get_
         name=plant.name,
         category=plant.category,
         quantity=plant.quantity,
-        moisture_threshold=plant.moisture_threshold,
+        moisture_threshold_low=plant.moisture_threshold_low,
+        moisture_threshold_high=plant.moisture_threshold_high,
+        needs_water=False,
         added_date=plant.added_date,
     )
     db.add(db_plant)
@@ -34,15 +36,23 @@ def get_plant_status(
     if plant is None:
         raise HTTPException(status_code=404, detail="Plant not found")
     if not plant.readings:
-        return schemas.PlantStatus(plant_id=plant.id, name=plant.name)
+        return schemas.PlantStatus(
+            plant_id=plant.id,
+            name=plant.name,
+            needs_water=plant.needs_water,
+            moisture_threshold_low=plant.moisture_threshold_low,
+            moisture_threshold_high=plant.moisture_threshold_high,
+        )
+
     latest_reading = max(plant.readings, key=lambda r: r.data_reading_date)
-    needs_water = latest_reading.moisture_reading < plant.moisture_threshold
 
     return schemas.PlantStatus(
         plant_id=plant.id,
         name=plant.name,
         latest_moisture=latest_reading.moisture_reading,
-        needs_water=needs_water,
+        needs_water=plant.needs_water,
+        moisture_threshold_low=plant.moisture_threshold_low,
+        moisture_threshold_high=plant.moisture_threshold_high,
     )
 
 @router.get("/plants", response_model=List[schemas.PlantResponse])

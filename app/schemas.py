@@ -23,7 +23,8 @@ class PlantCreate(BaseModel):
     name: str
     category: PlantCategories
     quantity: int
-    moisture_threshold: float
+    moisture_threshold_low: float
+    moisture_threshold_high: float
     added_date: datetime
 
     class Config:
@@ -38,7 +39,9 @@ class PlantResponse(BaseModel):
     name: str
     category: PlantCategories
     quantity: int
-    moisture_threshold: float
+    moisture_threshold_low: float
+    moisture_threshold_high: float
+    needs_water: bool
     added_date: datetime
 
     class Config:
@@ -77,6 +80,8 @@ class PlantStatus(BaseModel):
     name: str
     latest_moisture: Optional[float] = None
     needs_water: Optional[bool] = None
+    moisture_threshold_low: Optional[float] = None
+    moisture_threshold_high: Optional[float] = None
 
     class Config:
         """Allow building this schema from ORM model attributes."""

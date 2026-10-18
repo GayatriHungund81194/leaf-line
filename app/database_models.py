@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -17,7 +17,9 @@ class Plant(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     category: Mapped[str] = mapped_column(String, nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
-    moisture_threshold: Mapped[float] = mapped_column(Float, nullable=False)
+    moisture_threshold_low: Mapped[float] = mapped_column(Float, nullable=False)
+    moisture_threshold_high: Mapped[float] = mapped_column(Float, nullable=False)
+    needs_water: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     added_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
     readings: Mapped[list["SensorReading"]] = relationship(back_populates="plant")
