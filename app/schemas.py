@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-
+from typing import Optional
 from pydantic import BaseModel
 
 
@@ -64,6 +64,19 @@ class SensorReadingResponse(BaseModel):
     plant_id: int
     moisture_reading: float
     data_reading_date: datetime
+
+    class Config:
+        """Allow building this schema from ORM model attributes."""
+
+        from_attributes = True
+
+class PlantStatus(BaseModel):
+    """Whether a plant currently needs water, based on its latest reading."""
+
+    plant_id: int
+    name: str
+    latest_moisture: Optional[float] = None
+    needs_water: Optional[bool] = None
 
     class Config:
         """Allow building this schema from ORM model attributes."""
