@@ -60,7 +60,7 @@ class SensorReadingCreate(BaseModel):
 class SensorReadingResponse(BaseModel):
     """A stored sensor reading, including its id and server-stamped time."""
 
-    reading_id: int
+    id: int
     plant_id: int
     moisture_reading: float
     data_reading_date: datetime
