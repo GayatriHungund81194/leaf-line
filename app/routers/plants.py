@@ -1,5 +1,7 @@
 """Route handlers for creating and retrieving plants."""
 
+from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -42,3 +44,8 @@ def get_plant_status(
         latest_moisture=latest_reading.moisture_reading,
         needs_water=needs_water,
     )
+
+@router.get("/plants", response_model=List[schemas.PlantResponse])
+def list_plants(db: Session = Depends(database.get_db)):
+    """List all plants in the database."""
+    return db.query(database_models.Plant).all()
