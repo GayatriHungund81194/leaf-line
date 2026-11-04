@@ -1,0 +1,16 @@
+[MESSAGES CONTROL]
+# Scoped to firmware/esp32c6 only - these checks are correct for the
+# backend and disabled project-wide there; here they're false positives
+# or deliberate tradeoffs specific to MicroPython-on-device code:
+disable=
+    import-error,          # machine/st7789py only exist on-device, not in this venv
+    no-name-in-module,     # MicroPython's time module adds sleep_ms/ticks_* that CPython's doesn't have
+    invalid-name,          # these are scripts, not importable modules - module-level
+                            # variables here are per-run constants/state, not the kind
+                            # of shared constant the UPPER_CASE convention is for
+    global-statement,      # the setup()/step() animation pattern uses module-level
+                            # state instead of classes, to keep this lightweight on
+                            # a resource-constrained microcontroller
+    duplicate-code          # happy_plant.py/plant_needs_water.py are standalone demos,
+                            # kept deliberately self-contained for isolated testing -
+                            # their overlap with plant_status.py is expected, not a bug

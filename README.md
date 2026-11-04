@@ -2,44 +2,53 @@
 
 Your plants are bad at asking for water. Leaf-Line asks for them.
 
-An ESP32 with a cheap soil moisture sensor reports in over Wi-Fi, this
-backend decides who's thirsty, and a tiny on-device display animates
-when it's time to grab the watering can — before the fern starts
-dramatically wilting for attention.
+An ESP32-C6 with a capacitive soil moisture sensor reads real moisture
+data, compares it against calibrated per-plant thresholds, and shows
+a live animated face on its own screen — happy, thirsty, or
+overwatered — before the fern starts dramatically wilting for
+attention.
 
 Built as a learning project to go from "I write automation scripts" to
-"I ship a real backend" — one deliberate step at a time: schemas, then
-storage, then the decision logic, then the hardware side.
+"I ship a real backend and drive real hardware" — one deliberate step
+at a time: schemas, then storage, then decision logic, then the
+hardware side.
 
 ## How it works
 
 ```
-[ ESP32 + moisture sensor ]
-          │  HTTP POST, on a timer
+[ ESP32-C6 + capacitive moisture sensor ]
+          │  reads every 5 seconds, converts raw ADC to a
+          │  calibrated 0-100% moisture reading
           ▼
+[ on-device threshold check ]  ── needs_water / happy / overwatered,
+          │                      based on the active plant's
+          │                      threshold_low / threshold_high
+          ▼
+[ ST7789 screen ]  shows a matching animated face: rain, blinking
+          │        smile, or a static frown - updates live, no restart
+          ▼
+   (next: POST the reading to the FastAPI backend below)
+
 [ FastAPI backend ]  ── compares reading against the plant's thresholds
           │             using hysteresis, so noisy readings near the
           │             boundary don't flicker the decision
           ▼
 [ SQLite ]  stores every reading and each plant's current watering state
-          │
-          ▼
-[ ESP32 + OLED ]  polls "needs water?" and animates accordingly
 ```
 
 A plant doesn't have one threshold, it has two:
 
 - below `moisture_threshold_low` → flagged as needing water
-- above `moisture_threshold_high` → flagged as watered
-- anywhere in between → whatever it was already flagged as, unchanged
-
-That dead zone is what keeps a borderline reading from flipping the
-decision back and forth every time a new reading comes in.
+- above `moisture_threshold_high` → flagged as overwatered
+- anywhere in between → happy, whatever it was already flagged as stays
+  unchanged right at the edges (hysteresis), so a borderline reading
+  doesn't flip the decision back and forth every time a new one comes in
 
 ## Status
 
 🚧 Under construction. Built so far:
 
+**Backend**
 - [x] API schemas for plants and sensor readings (`app/schemas.py`)
 - [x] Database models with a real foreign key relationship (`app/database_models.py`)
 - [x] `POST /plants` — register a new plant
@@ -47,23 +56,44 @@ decision back and forth every time a new reading comes in.
 - [x] `POST /sensorreading` — record a reading and update watering state
 - [x] `GET /plants/{plant_id}/status` — does this plant need water right now?
 - [x] Hysteresis, so sensor noise near the threshold doesn't flicker the decision
-- [ ] ESP32 firmware + OLED animation
+
+**Firmware (ESP32-C6, MicroPython)**
+- [x] ST7789 screen driven directly (`firmware/esp32c6/drivers/st7789py.py`)
+- [x] Three animated states: blinking happy face, falling rain ("needs water"),
+      static frown ("overwatered")
+- [x] Capacitive moisture sensor wired and calibrated against real dry/wet soil
+      (`firmware/esp32c6/calibration.py`)
+- [x] Continuous monitoring loop — re-checks the sensor every 5 seconds and
+      switches animations live, no manual restart (`firmware/esp32c6/plant_status.py`)
+- [ ] Wi-Fi + POST real readings to the FastAPI backend
+- [ ] Poll the backend's `/status` for the display decision, instead of
+      deciding locally
+
+**Not started**
 - [ ] Automated tests
 
 ## Project layout
 
 ```
 app/
-  main.py               # FastAPI app entry point
-  database.py           # SQLAlchemy engine, session, declarative base
-  database_models.py    # Plant and SensorReading tables
-  schemas.py             # Pydantic request/response shapes
+  main.py                 # FastAPI app entry point
+  database.py              # SQLAlchemy engine, session, declarative base
+  database_models.py       # Plant and SensorReading tables
+  schemas.py                # Pydantic request/response shapes
   routers/
-    plants.py            # create/list plants, watering status
-    readings.py          # record sensor readings
-firmware/                 # reference ESP32 sketch (coming soon)
+    plants.py               # create/list plants, watering status
+    readings.py             # record sensor readings
+firmware/
+  esp32c6/
+    plant_status.py          # the real thing: live sensor -> animation loop
+    calibration.py           # DRY_VALUE / WET_VALUE - edit these to recalibrate
+    happy_plant.py           # standalone demo: blinking happy face
+    plant_needs_water.py     # standalone demo: falling rain
+    test_display.py          # sanity check: fills the screen red
+    test_sensor.py            # calibration helper: prints 30 raw readings
+    drivers/                  # third-party ST7789 + font files (MIT licensed)
 tests/
-NOTES.md                  # learning notes written along the way
+NOTES.md                      # learning notes written along the way
 ```
 
 ## Getting started
@@ -94,4 +124,5 @@ curl http://127.0.0.1:8000/plants/1/status
 - **FastAPI** — the web framework
 - **SQLAlchemy + SQLite** — storage
 - **Pydantic** — request/response validation
-- **ESP32** — the thing that actually goes near the dirt
+- **ESP32-C6 + MicroPython** — the thing that actually goes near the dirt
+- **ST7789 (172×320 LCD)** — the on-device display
