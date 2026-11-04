@@ -49,8 +49,8 @@ A plant doesn't have one threshold, it has two:
 🚧 Under construction. Built so far:
 
 **Backend**
-- [x] API schemas for plants and sensor readings (`app/schemas.py`)
-- [x] Database models with a real foreign key relationship (`app/database_models.py`)
+- [x] API schemas for plants and sensor readings (`backend/app/schemas.py`)
+- [x] Database models with a real foreign key relationship (`backend/app/database_models.py`)
 - [x] `POST /plants` — register a new plant
 - [x] `GET /plants` — list every plant
 - [x] `POST /sensorreading` — record a reading and update watering state
@@ -75,14 +75,17 @@ A plant doesn't have one threshold, it has two:
 ## Project layout
 
 ```
-app/
-  main.py                 # FastAPI app entry point
-  database.py              # SQLAlchemy engine, session, declarative base
-  database_models.py       # Plant and SensorReading tables
-  schemas.py                # Pydantic request/response shapes
-  routers/
-    plants.py               # create/list plants, watering status
-    readings.py             # record sensor readings
+backend/
+  requirements.txt
+  app/
+    main.py                 # FastAPI app entry point
+    database.py              # SQLAlchemy engine, session, declarative base
+    database_models.py       # Plant and SensorReading tables
+    schemas.py                # Pydantic request/response shapes
+    routers/
+      plants.py               # create/list plants, watering status
+      readings.py             # record sensor readings
+  tests/
 firmware/
   esp32c6/
     plant_status.py          # the real thing: live sensor -> animation loop
@@ -92,7 +95,6 @@ firmware/
     test_display.py          # sanity check: fills the screen red
     test_sensor.py            # calibration helper: prints 30 raw readings
     drivers/                  # third-party ST7789 + font files (MIT licensed)
-tests/
 NOTES.md                      # learning notes written along the way
 ```
 
@@ -101,9 +103,13 @@ NOTES.md                      # learning notes written along the way
 ```sh
 python3 -m venv venv
 source venv/bin/activate
+cd backend
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
+
+(The venv lives at the project root since it's shared with the firmware
+tooling (`esptool`, `mpremote`), not just the backend.)
 
 ## Try it
 
