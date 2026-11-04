@@ -1,0 +1,8 @@
+[MESSAGES CONTROL]
+# Scoped to assets/sprites only - a standalone pixel-art generator script,
+# not part of the running application.
+disable=
+    no-member,                       # Image.NEAREST etc. genuinely exist; pylint's
+                                      # Pillow stubs just don't see them in this version
+    too-many-arguments,
+    too-many-positional-arguments

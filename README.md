@@ -69,7 +69,13 @@ A plant doesn't have one threshold, it has two:
 - [ ] Poll the backend's `/status` for the display decision, instead of
       deciding locally
 
+**Assets**
+- [x] Pixel-art plant-character sprites for a future web frontend — happy,
+      needs_water (with a pouring watering can), overwatered (yellowing +
+      puddle) — generated programmatically, see `assets/sprites/`
+
 **Not started**
+- [ ] Web frontend to display the sprites
 - [ ] Automated tests
 
 ## Project layout
@@ -95,6 +101,12 @@ firmware/
     test_display.py          # sanity check: fills the screen red
     test_sensor.py            # calibration helper: prints 30 raw readings
     drivers/                  # third-party ST7789 + font files (MIT licensed)
+assets/
+  sprites/
+    generate_sprites.py      # regenerate all three sprites (needs Pillow)
+    happy.gif / .png
+    needs_water.gif / .png
+    overwatered.gif / .png
 NOTES.md                      # learning notes written along the way
 ```
 
