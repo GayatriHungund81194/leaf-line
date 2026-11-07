@@ -13,8 +13,11 @@ import math
 import random
 
 from machine import Pin, SPI, ADC
+import network
+import urequests
 import st7789py as st7789
 from calibration import DRY_VALUE, WET_VALUE
+from wifi_config import WIFI_SSID, WIFI_PASSWORD
 
 spi = SPI(1, baudrate=40000000, polarity=0, phase=0,
           sck=Pin(7), mosi=Pin(6))
@@ -52,8 +55,41 @@ PLANTS = {
 ACTIVE_PLANT = "fern"     # which plant THIS board is monitoring
 CHECK_INTERVAL_MS = 5000  # how often to re-read the sensor
 
+PLANT_ID = 1   # the backend's id for ACTIVE_PLANT - must already exist there
+BACKEND_URL = "http://192.168.1.164:8000/sensorreading"
+
 sensor = ADC(Pin(1))
 sensor.atten(ADC.ATTN_11DB)
+
+
+def connect_wifi():
+    """Connect to Wi-Fi, waiting up to 10s. Returns True if connected."""
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    if not wlan.isconnected():
+        wlan.connect(WIFI_SSID, WIFI_PASSWORD)
+        for _ in range(10):
+            if wlan.isconnected():
+                break
+            sleep_ms(1000)
+    if wlan.isconnected():
+        print("Wi-Fi connected, IP:", wlan.ifconfig()[0])
+    else:
+        print("Wi-Fi connection failed - continuing with local display only")
+    return wlan.isconnected()
+
+
+def post_reading(moisture_percent):
+    """POST the reading to the backend. Never raises - just logs failures,
+    so a network hiccup never crashes the monitoring loop."""
+    try:
+        response = urequests.post(
+            BACKEND_URL,
+            json={"plant_id": PLANT_ID, "moisture_reading": moisture_percent},
+        )
+        response.close()
+    except OSError as e:
+        print("POST failed:", e)
 
 
 def read_status():
@@ -77,6 +113,7 @@ def read_status():
 
     print("Raw:", raw_reading, "| Moisture:", round(moisture_percent, 1),
           "% | Status:", status)
+    post_reading(moisture_percent)
     return status
 
 
@@ -228,6 +265,8 @@ STATES = {
     "overwatered": (setup_overwatered, step_overwatered),
     "needs_water": (setup_rain, step_rain),
 }
+
+connect_wifi()
 
 current_status = read_status()
 setup_fn, step_fn = STATES[current_status]

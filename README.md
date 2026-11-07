@@ -26,9 +26,8 @@ hardware side.
           ▼
 [ ST7789 screen ]  shows a matching animated face: rain, blinking
           │        smile, or a static frown - updates live, no restart
-          ▼
-   (next: POST the reading to the FastAPI backend below)
-
+          │
+          ▼  (over Wi-Fi, HTTP POST)
 [ FastAPI backend ]  ── compares reading against the plant's thresholds
           │             using hysteresis, so noisy readings near the
           │             boundary don't flicker the decision
@@ -65,7 +64,9 @@ A plant doesn't have one threshold, it has two:
       (`firmware/esp32c6/calibration.py`)
 - [x] Continuous monitoring loop — re-checks the sensor every 5 seconds and
       switches animations live, no manual restart (`firmware/esp32c6/plant_status.py`)
-- [ ] Wi-Fi + POST real readings to the FastAPI backend
+- [x] Wi-Fi + POST real readings to the FastAPI backend every cycle — verified
+      live: readings and the backend's own hysteresis-based `needs_water`
+      state both update in the real database, wirelessly, automatically
 - [ ] Poll the backend's `/status` for the display decision, instead of
       deciding locally
 
@@ -94,12 +95,15 @@ backend/
   tests/
 firmware/
   esp32c6/
-    plant_status.py          # the real thing: live sensor -> animation loop
+    plant_status.py          # the real thing: live sensor -> Wi-Fi -> backend -> animation loop
     calibration.py           # DRY_VALUE / WET_VALUE - edit these to recalibrate
+    wifi_config.py            # WIFI_SSID / WIFI_PASSWORD - gitignored, create locally
     happy_plant.py           # standalone demo: blinking happy face
     plant_needs_water.py     # standalone demo: falling rain
     test_display.py          # sanity check: fills the screen red
     test_sensor.py            # calibration helper: prints 30 raw readings
+    test_wifi.py               # sanity check: connects and prints the IP
+    test_http.py                # sanity check: POSTs one test reading
     drivers/                  # third-party ST7789 + font files (MIT licensed)
 assets/
   sprites/
@@ -122,6 +126,19 @@ uvicorn app.main:app --reload
 
 (The venv lives at the project root since it's shared with the firmware
 tooling (`esptool`, `mpremote`), not just the backend.)
+
+To run the firmware's Wi-Fi-connected monitoring loop, create
+`firmware/esp32c6/wifi_config.py` (gitignored, never committed) with:
+
+```python
+WIFI_SSID = "your-network-name"
+WIFI_PASSWORD = "your-network-password"
+```
+
+Then update `BACKEND_URL` in `plant_status.py` to your machine's LAN IP
+(find it with `ipconfig getifaddr en0` on Mac), and start the backend
+with `uvicorn app.main:app --host 0.0.0.0` so it's reachable from the
+ESP32 over Wi-Fi, not just from localhost.
 
 ## Try it
 
