@@ -3,10 +3,10 @@
 Your plants are bad at asking for water. Leaf-Line asks for them.
 
 An ESP32-C6 with a capacitive soil moisture sensor reads real moisture
-data, compares it against calibrated per-plant thresholds, and shows
-a live animated face on its own screen — happy, thirsty, or
-overwatered — before the fern starts dramatically wilting for
-attention.
+data and reports it over Wi-Fi to a FastAPI backend, which decides
+whether each plant is happy, thirsty, or overwatered — a web frontend
+then shows an animated pixel-art face for the result, before the fern
+starts dramatically wilting for attention.
 
 Built as a learning project to go from "I write automation scripts" to
 "I ship a real backend and drive real hardware" — one deliberate step
@@ -19,20 +19,17 @@ hardware side.
 [ ESP32-C6 + capacitive moisture sensor ]
           │  reads every 5 seconds, converts raw ADC to a
           │  calibrated 0-100% moisture reading
-          ▼
-[ on-device threshold check ]  ── needs_water / happy / overwatered,
-          │                      based on the active plant's
-          │                      threshold_low / threshold_high
-          ▼
-[ ST7789 screen ]  shows a matching animated face: rain, blinking
-          │        smile, or a static frown - updates live, no restart
           │
-          ▼  (over Wi-Fi, HTTP POST)
+          ▼  (over Wi-Fi, HTTP POST - no screen, no on-device decision)
 [ FastAPI backend ]  ── compares reading against the plant's thresholds
           │             using hysteresis, so noisy readings near the
           │             boundary don't flicker the decision
           ▼
 [ SQLite ]  stores every reading and each plant's current watering state
+          │
+          ▼  (next: GET /plants/{id}/status, polled)
+[ web frontend ]  shows the matching pixel-art sprite: happy, needs
+                   water (watering can), or overwatered (puddle)
 ```
 
 A plant doesn't have one threshold, it has two:
@@ -57,26 +54,26 @@ A plant doesn't have one threshold, it has two:
 - [x] Hysteresis, so sensor noise near the threshold doesn't flicker the decision
 
 **Firmware (ESP32-C6, MicroPython)**
-- [x] ST7789 screen driven directly (`firmware/esp32c6/drivers/st7789py.py`)
-- [x] Three animated states: blinking happy face, falling rain ("needs water"),
-      static frown ("overwatered")
 - [x] Capacitive moisture sensor wired and calibrated against real dry/wet soil
       (`firmware/esp32c6/calibration.py`)
-- [x] Continuous monitoring loop — re-checks the sensor every 5 seconds and
-      switches animations live, no manual restart (`firmware/esp32c6/plant_status.py`)
+- [x] Continuous monitoring loop — re-reads the sensor every 5 seconds
+      (`firmware/esp32c6/plant_status.py`)
 - [x] Wi-Fi + POST real readings to the FastAPI backend every cycle — verified
       live: readings and the backend's own hysteresis-based `needs_water`
       state both update in the real database, wirelessly, automatically
-- [ ] Poll the backend's `/status` for the display decision, instead of
-      deciding locally
+- [x] Reconnects automatically if Wi-Fi drops
+- No on-device screen/animation logic - this board is sensor-only; all
+  decisions and all visuals live on the backend and frontend, not the device
+  (the `drivers/`, `happy_plant.py`, `plant_needs_water.py`, `test_display.py`
+  files are kept as standalone ST7789 demos, unused by `plant_status.py`)
 
 **Assets**
-- [x] Pixel-art plant-character sprites for a future web frontend — happy,
+- [x] Pixel-art plant-character sprites for the future web frontend — happy,
       needs_water (with a pouring watering can), overwatered (yellowing +
       puddle) — generated programmatically, see `assets/sprites/`
 
 **Not started**
-- [ ] Web frontend to display the sprites
+- [ ] Web frontend — poll `/status`, show the matching sprite
 - [ ] Automated tests
 
 ## Project layout
