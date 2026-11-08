@@ -62,10 +62,11 @@ A plant doesn't have one threshold, it has two:
       live: readings and the backend's own hysteresis-based `needs_water`
       state both update in the real database, wirelessly, automatically
 - [x] Reconnects automatically if Wi-Fi drops
-- No on-device screen/animation logic - this board is sensor-only; all
-  decisions and all visuals live on the backend and frontend, not the device
-  (the `drivers/`, `happy_plant.py`, `plant_needs_water.py`, `test_display.py`
-  files are kept as standalone ST7789 demos, unused by `plant_status.py`)
+- [x] `main.py` runs `plant_status.py` automatically on every power-up/reset -
+      verified standalone (no `mpremote run`, no laptop needed to start it)
+- No on-device screen/animation logic at all - this board is sensor-only,
+  no ST7789 driver on the device or in the repo; all decisions and all
+  visuals live on the backend and frontend
 
 **Assets**
 - [x] Pixel-art plant-character sprites for the future web frontend — happy,
@@ -92,16 +93,13 @@ backend/
   tests/
 firmware/
   esp32c6/
-    plant_status.py          # the real thing: live sensor -> Wi-Fi -> backend -> animation loop
+    main.py                  # boot entry point - runs on every power-up, starts plant_status
+    plant_status.py          # the real thing: live sensor -> Wi-Fi -> backend, on a loop
     calibration.py           # DRY_VALUE / WET_VALUE - edit these to recalibrate
     wifi_config.py            # WIFI_SSID / WIFI_PASSWORD - gitignored, create locally
-    happy_plant.py           # standalone demo: blinking happy face
-    plant_needs_water.py     # standalone demo: falling rain
-    test_display.py          # sanity check: fills the screen red
     test_sensor.py            # calibration helper: prints 30 raw readings
     test_wifi.py               # sanity check: connects and prints the IP
     test_http.py                # sanity check: POSTs one test reading
-    drivers/                  # third-party ST7789 + font files (MIT licensed)
 assets/
   sprites/
     generate_sprites.py      # regenerate all three sprites (needs Pillow)
@@ -156,5 +154,5 @@ curl http://127.0.0.1:8000/plants/1/status
 - **FastAPI** — the web framework
 - **SQLAlchemy + SQLite** — storage
 - **Pydantic** — request/response validation
-- **ESP32-C6 + MicroPython** — the thing that actually goes near the dirt
-- **ST7789 (172×320 LCD)** — the on-device display
+- **ESP32-C6 + MicroPython** — the thing that actually goes near the dirt,
+  sensor-only, no on-device screen
