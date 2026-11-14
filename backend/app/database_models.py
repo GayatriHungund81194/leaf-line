@@ -20,6 +20,7 @@ class Plant(Base):
     moisture_threshold_low: Mapped[float] = mapped_column(Float, nullable=False)
     moisture_threshold_high: Mapped[float] = mapped_column(Float, nullable=False)
     needs_water: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    overwatered: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     added_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
     readings: Mapped[list["SensorReading"]] = relationship(back_populates="plant")

@@ -16,7 +16,7 @@ from machine import Pin, ADC
 from calibration import DRY_VALUE, WET_VALUE
 from wifi_config import WIFI_SSID, WIFI_PASSWORD
 
-ACTIVE_PLANT = "fern"     # which plant THIS board is monitoring
+ACTIVE_PLANT = "anthurium"  # which plant THIS board is monitoring (label only)
 CHECK_INTERVAL_MS = 5000  # how often to re-read the sensor
 
 PLANT_ID = 1   # the backend's id for ACTIVE_PLANT - must already exist there

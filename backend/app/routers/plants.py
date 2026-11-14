@@ -20,6 +20,7 @@ def create_plant(plant: schemas.PlantCreate, db: Session = Depends(database.get_
         moisture_threshold_low=plant.moisture_threshold_low,
         moisture_threshold_high=plant.moisture_threshold_high,
         needs_water=False,
+        overwatered=False,
         added_date=plant.added_date,
     )
     db.add(db_plant)
@@ -40,6 +41,7 @@ def get_plant_status(
             plant_id=plant.id,
             name=plant.name,
             needs_water=plant.needs_water,
+            overwatered=plant.overwatered,
             moisture_threshold_low=plant.moisture_threshold_low,
             moisture_threshold_high=plant.moisture_threshold_high,
         )
@@ -51,6 +53,7 @@ def get_plant_status(
         name=plant.name,
         latest_moisture=latest_reading.moisture_reading,
         needs_water=plant.needs_water,
+        overwatered=plant.overwatered,
         moisture_threshold_low=plant.moisture_threshold_low,
         moisture_threshold_high=plant.moisture_threshold_high,
     )

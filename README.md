@@ -21,24 +21,30 @@ hardware side.
           │  calibrated 0-100% moisture reading
           │
           ▼  (over Wi-Fi, HTTP POST - no screen, no on-device decision)
-[ FastAPI backend ]  ── compares reading against the plant's thresholds
-          │             using hysteresis, so noisy readings near the
-          │             boundary don't flicker the decision
+[ FastAPI backend ]  ── classifies the reading against the plant's two
+          │             thresholds: needs_water / happy / overwatered
           ▼
 [ SQLite ]  stores every reading and each plant's current watering state
           │
-          ▼  (next: GET /plants/{id}/status, polled)
-[ web frontend ]  shows the matching pixel-art sprite: happy, needs
-                   water (watering can), or overwatered (puddle)
+          ▼  (polled every 5s, over CORS, by the browser)
+[ web frontend ]  plain HTML/CSS/JS, shows the matching pixel-art sprite:
+                   happy, needs water (watering can), or overwatered (puddle)
 ```
 
 A plant doesn't have one threshold, it has two:
 
-- below `moisture_threshold_low` → flagged as needing water
-- above `moisture_threshold_high` → flagged as overwatered
-- anywhere in between → happy, whatever it was already flagged as stays
-  unchanged right at the edges (hysteresis), so a borderline reading
-  doesn't flip the decision back and forth every time a new one comes in
+- below `moisture_threshold_low` → `needs_water`
+- above `moisture_threshold_high` → `overwatered`
+- in between → `happy`
+
+Classification is stateless (recomputed fresh from every new reading,
+no "dead zone" memory) - an earlier version tried a hysteresis dead
+zone to resist sensor noise near a boundary, but that only works
+cleanly for a single binary flag. Extending it to three states let a
+plant get stuck "overwatered" forever with no path back to "happy"
+without first passing through "needs_water", which was wrong. The
+device already averages 10 samples per reading, which handles most of
+the noise a dead zone would otherwise guard against.
 
 ## Status
 
@@ -50,8 +56,10 @@ A plant doesn't have one threshold, it has two:
 - [x] `POST /plants` — register a new plant
 - [x] `GET /plants` — list every plant
 - [x] `POST /sensorreading` — record a reading and update watering state
-- [x] `GET /plants/{plant_id}/status` — does this plant need water right now?
-- [x] Hysteresis, so sensor noise near the threshold doesn't flicker the decision
+- [x] `GET /plants/{plant_id}/status` — happy / needs_water / overwatered
+- [x] Real three-state watering status (`needs_water` + `overwatered` flags,
+      mutually exclusive) — not just a binary "needs water or not"
+- [x] CORS enabled, so the browser-based frontend can call the API directly
 
 **Firmware (ESP32-C6, MicroPython)**
 - [x] Capacitive moisture sensor wired and calibrated against real dry/wet soil
@@ -59,8 +67,8 @@ A plant doesn't have one threshold, it has two:
 - [x] Continuous monitoring loop — re-reads the sensor every 5 seconds
       (`firmware/esp32c6/plant_status.py`)
 - [x] Wi-Fi + POST real readings to the FastAPI backend every cycle — verified
-      live: readings and the backend's own hysteresis-based `needs_water`
-      state both update in the real database, wirelessly, automatically
+      live with a real plant: readings and the backend's own computed
+      watering state both update in the real database, wirelessly, automatically
 - [x] Reconnects automatically if Wi-Fi drops
 - [x] `main.py` runs `plant_status.py` automatically on every power-up/reset -
       verified standalone (no `mpremote run`, no laptop needed to start it)
@@ -68,14 +76,21 @@ A plant doesn't have one threshold, it has two:
   no ST7789 driver on the device or in the repo; all decisions and all
   visuals live on the backend and frontend
 
+**Frontend**
+- [x] Plain HTML/CSS/JS page — no build step, no framework, matching the
+      rest of this project's lightweight style (`frontend/`)
+- [x] Polls `GET /plants/{id}/status` every 5 seconds and shows the matching
+      sprite, moisture %, and a status label — verified live against a real
+      plant, no manual refresh needed
+
 **Assets**
-- [x] Pixel-art plant-character sprites for the future web frontend — happy,
-      needs_water (with a pouring watering can), overwatered (yellowing +
-      puddle) — generated programmatically, see `assets/sprites/`
+- [x] Pixel-art plant-character sprites — happy, needs_water (with a
+      pouring watering can), overwatered (yellowing + puddle) — generated
+      programmatically, see `assets/sprites/`
 
 **Not started**
-- [ ] Web frontend — poll `/status`, show the matching sprite
 - [ ] Automated tests
+- [ ] OTA firmware updates (device currently needs a USB connection to update)
 
 ## Project layout
 
@@ -100,6 +115,11 @@ firmware/
     test_sensor.py            # calibration helper: prints 30 raw readings
     test_wifi.py               # sanity check: connects and prints the IP
     test_http.py                # sanity check: POSTs one test reading
+frontend/
+  index.html                  # the page
+  style.css
+  app.js                       # polls /status, swaps the sprite - edit
+                                 # BACKEND_URL/PLANT_ID here
 assets/
   sprites/
     generate_sprites.py      # regenerate all three sprites (needs Pillow)
@@ -149,6 +169,19 @@ curl -X POST http://127.0.0.1:8000/sensorreading \
 curl http://127.0.0.1:8000/plants/1/status
 ```
 
+To see the actual frontend (not just curl), start the backend with
+`--host 0.0.0.0`, then in a separate terminal:
+
+```sh
+cd ~/Desktop/Leaf-Line
+python3 -m http.server 8080
+```
+
+and open `http://localhost:8080/frontend/index.html` in a real browser
+(not by double-clicking the file - browsers block fetch requests from
+plain `file://` pages). Edit `BACKEND_URL` and `PLANT_ID` at the top of
+`frontend/app.js` to match your setup first.
+
 ## Tech
 
 - **FastAPI** — the web framework
@@ -156,3 +189,4 @@ curl http://127.0.0.1:8000/plants/1/status
 - **Pydantic** — request/response validation
 - **ESP32-C6 + MicroPython** — the thing that actually goes near the dirt,
   sensor-only, no on-device screen
+- **Plain HTML/CSS/JS** — the frontend, no build step or framework

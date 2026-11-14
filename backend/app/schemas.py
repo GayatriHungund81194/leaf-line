@@ -42,6 +42,7 @@ class PlantResponse(BaseModel):
     moisture_threshold_low: float
     moisture_threshold_high: float
     needs_water: bool
+    overwatered: bool
     added_date: datetime
 
     class Config:
@@ -80,6 +81,7 @@ class PlantStatus(BaseModel):
     name: str
     latest_moisture: Optional[float] = None
     needs_water: Optional[bool] = None
+    overwatered: Optional[bool] = None
     moisture_threshold_low: Optional[float] = None
     moisture_threshold_high: Optional[float] = None
 

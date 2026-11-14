@@ -26,12 +26,22 @@ def create_sensor_reading(
     )
     db.add(db_reading)
 
-    # Hysteresis: only flip needs_water when the reading clearly crosses
-    # one of the two thresholds. Inside the dead zone, leave it as-is.
+    # Three-state classification against the plant's thresholds. This is
+    # intentionally stateless (no dead zone): a two-threshold hysteresis
+    # dead zone only works cleanly for a single binary flag - extending it
+    # to three states would let a plant get stuck "overwatered" forever
+    # with no path back to "happy" without first passing through
+    # "needs_water", which is wrong. Sensor averaging on the device side
+    # already smooths out most of the noise a dead zone would guard against.
     if sensor_reading.moisture_reading < plant.moisture_threshold_low:
         plant.needs_water = True
+        plant.overwatered = False
     elif sensor_reading.moisture_reading > plant.moisture_threshold_high:
         plant.needs_water = False
+        plant.overwatered = True
+    else:
+        plant.needs_water = False
+        plant.overwatered = False
 
     db.commit()
     db.refresh(db_reading)
