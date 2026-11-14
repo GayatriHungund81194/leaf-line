@@ -17,8 +17,8 @@ hardware side.
 
 ```
 [ ESP32-C6 + capacitive moisture sensor ]
-          │  reads every 5 seconds, converts raw ADC to a
-          │  calibrated 0-100% moisture reading
+          │  wakes every 4 hours from deep sleep, reads once, converts
+          │  raw ADC to a calibrated 0-100% moisture reading
           │
           ▼  (over Wi-Fi, HTTP POST - no screen, no on-device decision)
 [ FastAPI backend ]  ── classifies the reading against the plant's two
@@ -64,7 +64,14 @@ the noise a dead zone would otherwise guard against.
 **Firmware (ESP32-C6, MicroPython)**
 - [x] Capacitive moisture sensor wired and calibrated against real dry/wet soil
       (`firmware/esp32c6/calibration.py`)
-- [x] Continuous monitoring loop — re-reads the sensor every 5 seconds
+- [x] Deep-sleep cycle, not a continuous loop — reads once, POSTs once, then
+      `machine.deepsleep()` for `CHECK_INTERVAL_HOURS` (4 by default), which
+      powers the chip down almost entirely; waking is a full reboot, so the
+      script just runs from the top again with no `while True` needed. Keeps
+      a power bank running for potentially weeks instead of ~41 hours.
+      Verified live: USB-serial genuinely disappears while asleep and
+      reappears on wake, confirmed with real deep-sleep cycles, not just a
+      crash back to the REPL
       (`firmware/esp32c6/plant_status.py`)
 - [x] Wi-Fi + POST real readings to the FastAPI backend every cycle — verified
       live with a real plant: readings and the backend's own computed
