@@ -4,9 +4,10 @@ Your plants are bad at asking for water. Leaf-Line asks for them.
 
 An ESP32-C6 with a capacitive soil moisture sensor reads real moisture
 data and reports it over Wi-Fi to a FastAPI backend, which decides
-whether each plant is happy, thirsty, or overwatered — a web frontend
-then shows an animated pixel-art face for the result, before the fern
-starts dramatically wilting for attention.
+whether each plant is happy, thirsty, or overwatered — both the
+device's own screen and a web frontend show a cute animated pixel-art
+pot-plant character for the result, before the fern starts dramatically
+wilting for attention.
 
 Built as a learning project to go from "I write automation scripts" to
 "I ship a real backend and drive real hardware" — one deliberate step
@@ -17,12 +18,14 @@ hardware side.
 
 ```
 [ ESP32-C6 + capacitive moisture sensor ]
-          │  wakes every 4 hours from deep sleep, reads once, converts
-          │  raw ADC to a calibrated 0-100% moisture reading
+          │  reads every 5 seconds, converts raw ADC to a calibrated
+          │  0-100% moisture reading, decides its OWN local status
+          │  from a copy of the plant's thresholds, and shows a cute
+          │  blinking pot-plant character on its own ST7789 screen
           │
-          ▼  (over Wi-Fi, HTTP POST - no screen, no on-device decision)
-[ FastAPI backend ]  ── classifies the reading against the plant's two
-          │             thresholds: needs_water / happy / overwatered
+          ▼  (over Wi-Fi, HTTP POST, in parallel with the local decision)
+[ FastAPI backend ]  ── classifies the same reading against the plant's
+          │             two thresholds: needs_water / happy / overwatered
           ▼
 [ SQLite ]  stores every reading and each plant's current watering state
           │
@@ -30,6 +33,14 @@ hardware side.
 [ web frontend ]  plain HTML/CSS/JS, shows the matching pixel-art sprite:
                    happy, needs water (watering can), or overwatered (puddle)
 ```
+
+The device's on-screen decision and the backend's decision are computed
+independently from the same reading, using the same thresholds kept in
+sync by hand (`PLANTS` in `plant_status.py` vs. the `Plant` row in the
+database) - they should normally agree, but if you ever change one
+without the other, the device's screen and the website can briefly
+disagree. This happened once in testing because a temporary threshold
+override meant for a quick visual check was left deployed.
 
 A plant doesn't have one threshold, it has two:
 
@@ -64,24 +75,39 @@ the noise a dead zone would otherwise guard against.
 **Firmware (ESP32-C6, MicroPython)**
 - [x] Capacitive moisture sensor wired and calibrated against real dry/wet soil
       (`firmware/esp32c6/calibration.py`)
-- [x] Deep-sleep cycle, not a continuous loop — reads once, POSTs once, then
-      `machine.deepsleep()` for `CHECK_INTERVAL_HOURS` (4 by default), which
-      powers the chip down almost entirely; waking is a full reboot, so the
-      script just runs from the top again with no `while True` needed. Keeps
-      a power bank running for potentially weeks instead of ~41 hours.
-      Verified live: USB-serial genuinely disappears while asleep and
-      reappears on wake, confirmed with real deep-sleep cycles, not just a
-      crash back to the REPL
+- [x] Continuous loop, checking the sensor every `CHECK_INTERVAL_MS` (5s by
+      default) — not deep sleep. A continuously-animated on-device screen
+      needs the chip awake the whole time, which was tried and reverted:
+      see "Deep sleep vs. the on-device screen" below
       (`firmware/esp32c6/plant_status.py`)
+- [x] A cute pot-plant character on the device's own ST7789 screen - bright
+      with raised arms and a smile when happy, muted with drooped arms and
+      a frown when overwatered, and wilted with a tilted watering can
+      pouring drops onto it when it needs water. Built from the same
+      row-swept-ellipse technique used for the web sprites, adapted to
+      this driver's actual primitives (no filled polygons or arcs
+      available here, unlike the Pillow-based sprite generator)
 - [x] Wi-Fi + POST real readings to the FastAPI backend every cycle — verified
       live with a real plant: readings and the backend's own computed
       watering state both update in the real database, wirelessly, automatically
 - [x] Reconnects automatically if Wi-Fi drops
 - [x] `main.py` runs `plant_status.py` automatically on every power-up/reset -
       verified standalone (no `mpremote run`, no laptop needed to start it)
-- No on-device screen/animation logic at all - this board is sensor-only,
-  no ST7789 driver on the device or in the repo; all decisions and all
-  visuals live on the backend and frontend
+
+**Deep sleep vs. the on-device screen** - these two goals conflict, and
+can't both be true at once:
+- Deep sleep (`machine.deepsleep()`) powers the chip down almost
+  entirely between readings, extending a power bank from ~41 hours to
+  potentially weeks - but the screen and backlight power down with it,
+  so there's no continuous animation, only a brief flash on each wake.
+- A continuously-animated screen needs the chip (and backlight) awake
+  the whole time, which means no deep sleep and the shorter ~41 hour
+  power bank life.
+
+This project currently runs the continuous/animated version, by
+request - the deep-sleep version still exists in git history
+(`git show 954c9ff:firmware/esp32c6/plant_status.py`) if the tradeoff
+is ever worth revisiting.
 
 **Frontend**
 - [x] Plain HTML/CSS/JS page — no build step, no framework, matching the
@@ -116,12 +142,13 @@ backend/
 firmware/
   esp32c6/
     main.py                  # boot entry point - runs on every power-up, starts plant_status
-    plant_status.py          # the real thing: live sensor -> Wi-Fi -> backend, on a loop
+    plant_status.py          # the real thing: sensor -> screen + Wi-Fi -> backend, on a loop
     calibration.py           # DRY_VALUE / WET_VALUE - edit these to recalibrate
     wifi_config.py            # WIFI_SSID / WIFI_PASSWORD - gitignored, create locally
     test_sensor.py            # calibration helper: prints 30 raw readings
     test_wifi.py               # sanity check: connects and prints the IP
     test_http.py                # sanity check: POSTs one test reading
+    drivers/                   # third-party ST7789 driver (MIT licensed)
 frontend/
   index.html                  # the page
   style.css
@@ -194,6 +221,7 @@ plain `file://` pages). Edit `BACKEND_URL` and `PLANT_ID` at the top of
 - **FastAPI** — the web framework
 - **SQLAlchemy + SQLite** — storage
 - **Pydantic** — request/response validation
-- **ESP32-C6 + MicroPython** — the thing that actually goes near the dirt,
-  sensor-only, no on-device screen
+- **ESP32-C6 + MicroPython** — the thing that actually goes near the dirt
+- **ST7789 (172×320 LCD)** — the on-device screen, driven directly by a
+  third-party MicroPython driver
 - **Plain HTML/CSS/JS** — the frontend, no build step or framework

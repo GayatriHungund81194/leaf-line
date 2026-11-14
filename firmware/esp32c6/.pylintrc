@@ -1,3 +1,6 @@
+[MAIN]
+ignore-paths=drivers  # third-party vendored code (MIT licensed) - not ours to lint
+
 [MESSAGES CONTROL]
 # Scoped to firmware/esp32c6 only - these checks are correct for the
 # backend and disabled project-wide there; here they're false positives
