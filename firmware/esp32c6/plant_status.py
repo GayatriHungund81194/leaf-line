@@ -50,7 +50,7 @@ def rgb565(r, g, b):
 # cute pot-plant character palettes - happy is bright and warm, overwatered
 # is muted and cool, so the two read as distinct at a glance
 HAPPY_PAL = {
-    "bg": rgb565(240, 248, 235),
+    "bg": BLACK,
     "pot_body": rgb565(70, 150, 160),
     "pot_band": rgb565(250, 245, 230),
     "pot_shadow": rgb565(50, 120, 130),
@@ -62,7 +62,7 @@ HAPPY_PAL = {
 }
 
 OVERWATERED_PAL = {
-    "bg": rgb565(210, 225, 235),
+    "bg": BLACK,
     "pot_body": rgb565(95, 115, 120),
     "pot_band": rgb565(220, 215, 200),
     "pot_shadow": rgb565(70, 90, 95),
@@ -74,7 +74,7 @@ OVERWATERED_PAL = {
 }
 
 NEEDS_WATER_PAL = {
-    "bg": rgb565(245, 235, 215),
+    "bg": BLACK,
     "pot_body": rgb565(150, 100, 70),
     "pot_band": rgb565(230, 210, 180),
     "pot_shadow": rgb565(120, 80, 55),
@@ -173,41 +173,43 @@ def fill_ellipse(cx, cy, half_w, half_h, color):
 
 
 # ---------------- cute pot-plant character (happy + overwatered) ----------------
+# sizes below are ~1.2x the original design, shifted up slightly to leave
+# room at the bottom for the taller pot and legs
 POT_CX = 86
-POT_TOP_Y = 210
-POT_BOTTOM_Y = 280
+POT_TOP_Y = 200
+POT_BOTTOM_Y = 284
 
-LEFT_EYE_CX, RIGHT_EYE_CX, EYE_CY = POT_CX - 18, POT_CX + 18, POT_TOP_Y + 18
-EYE_HALF_W, EYE_HALF_H = 14, 18
-BORDER = 3
-PUPIL_HALF = 7
+LEFT_EYE_CX, RIGHT_EYE_CX, EYE_CY = POT_CX - 22, POT_CX + 22, POT_TOP_Y + 22
+EYE_HALF_W, EYE_HALF_H = 17, 22
+BORDER = 4
+PUPIL_HALF = 8
 
-MOUTH_X0, MOUTH_X1 = POT_CX - 20, POT_CX + 20
-MOUTH_CENTER_Y = EYE_CY + 16
-MOUTH_DEPTH = 10
+MOUTH_X0, MOUTH_X1 = POT_CX - 24, POT_CX + 24
+MOUTH_CENTER_Y = EYE_CY + 19
+MOUTH_DEPTH = 12
 
 STEM_X = POT_CX
 
 HAPPY_BLOBS = [
-    (-32, -8, 16, 12), (32, -8, 16, 12),
-    (-20, -30, 15, 11), (20, -30, 15, 11),
-    (-8, -48, 13, 10), (8, -48, 13, 10),
-    (0, -62, 12, 9),
+    (-38, -10, 19, 14), (38, -10, 19, 14),
+    (-24, -36, 18, 13), (24, -36, 18, 13),
+    (-10, -58, 16, 12), (10, -58, 16, 12),
+    (0, -74, 14, 11),
 ]
 OVERWATERED_BLOBS = [
-    (-22, 25, 12, 9), (22, 25, 12, 9),
-    (-14, 5, 11, 8), (14, 5, 11, 8),
-    (-6, -10, 10, 7), (6, -10, 10, 7),
+    (-26, 30, 14, 11), (26, 30, 14, 11),
+    (-17, 6, 13, 10), (17, 6, 13, 10),
+    (-7, -12, 12, 8), (7, -12, 12, 8),
 ]
 NEEDS_WATER_BLOBS = OVERWATERED_BLOBS  # same droop shape, different palette
 
 
 def draw_pot(pal):
     """Draw the barrel-shaped pot: rim band, bulging body, base shadow."""
-    draw_rect_row(POT_TOP_Y, POT_TOP_Y + 10, 36, pal["pot_band"])
-    draw_rect_row(POT_TOP_Y + 10, POT_TOP_Y + 45, 44, pal["pot_body"])
-    draw_rect_row(POT_TOP_Y + 45, POT_BOTTOM_Y, 36, pal["pot_body"])
-    draw_rect_row(POT_BOTTOM_Y - 8, POT_BOTTOM_Y, 36, pal["pot_shadow"])
+    draw_rect_row(POT_TOP_Y, POT_TOP_Y + 12, 43, pal["pot_band"])
+    draw_rect_row(POT_TOP_Y + 12, POT_TOP_Y + 54, 53, pal["pot_body"])
+    draw_rect_row(POT_TOP_Y + 54, POT_BOTTOM_Y, 43, pal["pot_body"])
+    draw_rect_row(POT_BOTTOM_Y - 10, POT_BOTTOM_Y, 43, pal["pot_shadow"])
 
 
 def draw_rect_row(y0, y1, half_w, color):
@@ -233,15 +235,15 @@ def draw_leaves(blobs, pal, stem_height):
 
 def draw_limbs(pal, raised):
     """Draw arm nubs (raised when happy, drooped when overwatered) and legs."""
-    arm_y = POT_TOP_Y + 10
+    arm_y = POT_TOP_Y + 12
     if raised:
-        tft.fill_rect(POT_CX - 48, arm_y - 10, 14, 6, pal["limb"])
-        tft.fill_rect(POT_CX + 34, arm_y - 10, 14, 6, pal["limb"])
+        tft.fill_rect(POT_CX - 58, arm_y - 12, 17, 7, pal["limb"])
+        tft.fill_rect(POT_CX + 41, arm_y - 12, 17, 7, pal["limb"])
     else:
-        tft.fill_rect(POT_CX - 48, arm_y + 14, 14, 6, pal["limb"])
-        tft.fill_rect(POT_CX + 34, arm_y + 14, 14, 6, pal["limb"])
-    tft.fill_rect(POT_CX - 28, POT_BOTTOM_Y, 10, 16, pal["limb"])
-    tft.fill_rect(POT_CX + 18, POT_BOTTOM_Y, 10, 16, pal["limb"])
+        tft.fill_rect(POT_CX - 58, arm_y + 17, 17, 7, pal["limb"])
+        tft.fill_rect(POT_CX + 41, arm_y + 17, 17, 7, pal["limb"])
+    tft.fill_rect(POT_CX - 34, POT_BOTTOM_Y, 12, 19, pal["limb"])
+    tft.fill_rect(POT_CX + 22, POT_BOTTOM_Y, 12, 19, pal["limb"])
 
 
 def draw_mouth(color, smiling):
@@ -262,8 +264,8 @@ def draw_mouth(color, smiling):
 
 def draw_blush(color):
     """Draw small blush ellipses below-outside each eye."""
-    for cx in (LEFT_EYE_CX - 2, RIGHT_EYE_CX + 2):
-        fill_ellipse(cx, EYE_CY + 3, 4, 3, color)
+    for cx in (LEFT_EYE_CX - 3, RIGHT_EYE_CX + 3):
+        fill_ellipse(cx, EYE_CY + 4, 5, 4, color)
 
 
 # ---------------- shared blink animation (happy + overwatered) ----------------
@@ -313,7 +315,7 @@ def step_blink():
 def setup_happy():
     """Draw the happy pot character: bright colors, raised arms, smile, blush."""
     tft.fill(HAPPY_PAL["bg"])
-    draw_leaves(HAPPY_BLOBS, HAPPY_PAL, stem_height=90)
+    draw_leaves(HAPPY_BLOBS, HAPPY_PAL, stem_height=108)
     draw_pot(HAPPY_PAL)
     draw_mouth(BLACK, smiling=True)
     draw_blush(HAPPY_PAL["blush"])
@@ -324,7 +326,7 @@ def setup_happy():
 def setup_overwatered():
     """Draw the overwatered pot character: muted colors, drooped arms, frown."""
     tft.fill(OVERWATERED_PAL["bg"])
-    draw_leaves(OVERWATERED_BLOBS, OVERWATERED_PAL, stem_height=35)
+    draw_leaves(OVERWATERED_BLOBS, OVERWATERED_PAL, stem_height=42)
     draw_pot(OVERWATERED_PAL)
     draw_mouth(BLACK, smiling=False)
     draw_limbs(OVERWATERED_PAL, raised=False)
@@ -334,7 +336,7 @@ def setup_overwatered():
 # ---------------- needs_water (wilted plant + watering can) ----------------
 CAN_CX, CAN_CY = 55, 90
 CAN_NOZZLE = (CAN_CX + 55, CAN_CY + 30)
-NEEDS_WATER_STEM_HEIGHT = 35
+NEEDS_WATER_STEM_HEIGHT = 42
 NEEDS_WATER_CROWN_Y = POT_TOP_Y - NEEDS_WATER_STEM_HEIGHT
 
 _nw_drops = []
